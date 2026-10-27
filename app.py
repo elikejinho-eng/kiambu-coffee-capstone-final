@@ -90,6 +90,7 @@ if not st.session_state.logged_in:
             else: st.error("❌ Wrong login")
         if st.session_state.step1_ok:
             st.markdown("### 🍒 Step 2: Enter Red Berry Code (2FA)")
+            st.info(f"Terminal Code: {pyotp.TOTP(st.session_state.temp_secret).now()}")
             code=st.text_input("6-digit code from terminal", max_chars=6)
             if st.button("🍒 Verify & Enter Farm"):
                 totp=pyotp.TOTP(st.session_state.temp_secret)
