@@ -88,59 +88,72 @@ if not st.session_state.logged_in:
                 st.session_state.temp_username=username; st.session_state.step1_ok=True
                 st.success("✅ Step 1 OK! Now enter 2FA")
             else: st.error("❌ Wrong login")
+        # ================= START LINE 91 =================
         if st.session_state.step1_ok:
-            st.markdown("### 🍒 Step 2: Enter Red Berry Code (2FA)")
-            st.info(f"Terminal Code: {pyotp.TOTP(st.session_state.temp_secret).now()}")
-            code=st.text_input("6-digit code from terminal", max_chars=6)
-            if st.button("🍒 Verify & Enter Farm"):
-                totp=pyotp.TOTP(st.session_state.temp_secret)
-                if totp.verify(code):
-                    st.session_state.logged_in=True
-                    st.session_state.username=st.session_state.temp_username
-                    st.session_state.role=st.session_state.temp_role
-                    st.rerun()
-                else: st.error("❌ Wrong code - get new one from terminal")
-    st.stop()
+            st.markdown("### 🔴 Step 2: Red Berry Phone Verification")
+            st.info("Enter your phone to get M-Pesa style OTP code")
 
-# --- LOGGED IN DASHBOARD ---
-with st.sidebar:
-    st.markdown(f"# 🌿🍒 Kiambu Coffee\n### Welcome {st.session_state.username} ☕")
-    st.image("https://images.unsplash.com/photo-1504630083235-1413345e8fe4?auto=format&fit=crop&w=400&q=80", caption="☕ Kiambu AA Coffee Beans")
-    st.markdown("---")
-    st.markdown("**🌿 Sub-Counties:**\n- Gatundu\n- Kiambaa\n- Githunguri")
-    if st.button("🚪 Logout"):
-        st.session_state.logged_in=False; st.session_state.step1_ok=False; st.rerun()
+            # Phone number input
+            phone = st.text_input(
+                "📱 Enter your Safaricom number",
+                placeholder="+254712345678",
+                value=st.session_state.get("temp_phone", "")
+            )
 
-st.markdown(f"## 🌿 Welcome {st.session_state.username} to Your Farm 🍒")
-st.markdown("### 📊 Dashboard - Green Leaves and Red Berries")
+            # Button 1: Send OTP
+            if st.button("📱 Send Red Berry Code via SMS"):
+                if not phone.startswith("+254"):
+                    st.error("Use format +254712345678")
+                else:
+                    import africastalking
+                    import random
 
-c1,c2,c3,c4=st.columns(4)
-c1.metric("🌿 Yield", "450kg", "↑ 12%"); c2.metric("💰 Profit", "Ksh45k", "↑ 8%")
-c3.metric("🍒 Price", "Ksh120", "↑ 5%"); c4.metric("🌧️ Rain", "150mm", "Good")
+                    # Initialize Africa's Talking
+                    africastalking.initialize("sandbox", "YOUR_NEW_API_KEY_HERE")
+                    sms = africastalking.SMS
 
-st.divider()
-left,right=st.columns([2,1])
-with left:
-    st.subheader("📈 Sub-County Profits - Coffee Growth")
-    df=pd.DataFrame({
-        "Sub-County":["Gatundu","Kiambaa","Githunguri","Lari"],
-        "Profit Ksh":[45000,38000,42000,36000],
-        "Berries":["🍒","🌿","🍒","🌿"]
-    })
-    st.bar_chart(df, x="Sub-County", y="Profit Ksh", color="#B71C1C")
-    st.dataframe(df, use_container_width=True)
+                    # Generate 6-digit code
+                    otp_code = str(random.randint(100000, 999999))
+                    st.session_state.phone_otp = otp_code
+                    st.session_state.temp_phone = phone
+                    st.session_state.otp_sent = True
 
-with right:
-    st.markdown("### 🚨 Farm Alerts")
-    st.success("🌿✅ Fertilizer needed - Kiambaa - Apply NPK")
-    st.error("🍒⚠️ Berry Alert - Gatundu - Ready to harvest!")
-    st.warning("🌧️ Rain expected - Githunguri - 150mm")
-    st.info("☕ Quality Check - Lari - Grade AA")
-    st.markdown("""
-    <div style='background: linear-gradient(135deg, #E8F5E9, #FFEBEE); padding:15px; border-radius:15px; border:2px solid #2E7D32;'>
-    <h4 style='color:#1B5E20;'>🍒 Today's Harvest</h4>
-    <p>🌿 <b>Gatundu</b> - 450kg - <span style='color:green;'>Premium</span></p>
-    <p>🍒 <b>Kiambaa</b> - 380kg - <span style='color:red;'>Ripe</span></p>
-    <p>🌱 <b>Githunguri</b> - 420kg - <span style='color:brown;'>AA</span></p>
-    </div>
-    """, unsafe_allow_html=True)
+                    # Send SMS (in sandbox, check Dashboard > SMS > Logs)
+                    try:
+                        response = sms.send(f"KIAMBU COFFEE: Your Red Berry code is {otp_code}. Valid 5 min.", [phone])
+                        st.success(f"✅ Code sent to {phone}")
+                        st.warning(f"SANDBOX MODE: Your code is {otp_code} (Check AT Dashboard -> SMS -> Logs)")
+                    except Exception as e:
+                        # Even if SMS fails, show code for testing
+                        st.success(f"✅ Code Generated!")
+                        st.warning(f"SANDBOX MODE: Your code is {otp_code}")
+                        st.write(f"Error (normal in sandbox): {e}")
+
+            # Show OTP input only if code was sent
+            if st.session_state.get("otp_sent"):
+                st.divider()
+                sms_code = st.text_input(
+                    "🔑 Enter 6-digit code from SMS",
+                    placeholder="e.g. 834921",
+                    type="password"
+                )
+
+                # Button 2: Verify and Enter Farm
+                if st.button("🔐 Verify & Enter Farm"):
+                    if sms_code == st.session_state.get("phone_otp"):
+                        # SUCCESS - LOG FARMER IN
+                        st.session_state.logged_in = True
+                        st.session_state.username = st.session_state.temp_username
+                        st.session_state.role = st.session_state.temp_role
+                        st.session_state.step1_ok = False
+                        st.session_state.otp_sent = False
+
+                        st.success(f"✅ Welcome {st.session_state.username} to Kiambu Coffee Farm!")
+                        st.balloons()
+                        st.rerun()
+                    elif sms_code == "":
+                        st.error("Please enter the code")
+                    else:
+                        st.error("❌ Wrong code. You entered {sms_code}, expected {st.session_state.get('phone_otp')}")
+                        st.info("Click 'Send Red Berry Code via SMS' to get new code")
+        # ================= END OF FILE =================
