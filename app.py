@@ -1,159 +1,213 @@
 import streamlit as st
-import pandas as pd
-import pyotp
-import sqlite3
-import hashlib
+import random
+import africastalking
+from datetime import datetime
 
-st.set_page_config(page_title="KIAMBU COFFEE CAPSTONE", page_icon="🍒", layout="wide")
+# PAGE CONFIG
+st.set_page_config(
+    page_title="KIAMBU RED RIPE CHERRIES",
+    page_icon="🔴",
+    layout="wide"
+)
 
-# --- COFFEE GRAPHICS THEME ---
+# STYLE - 100% RED RIPE THEME
 st.markdown("""
 <style>
-    .stApp {
-        background: linear-gradient(rgba(255,253,245,0.85), rgba(232,245,233,0.9)), url("https://images.unsplash.com/photo-1447933601403-0c6688de566e?auto=format&fit=crop&w=2000&q=80");
-        background-size: cover;
-        background-attachment: fixed;
-    }
-    div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, #ffffff 0%, #E8F5E9 100%);
-        border: 3px solid #2E7D32;
-        border-left: 8px solid #B71C1C;
-        border-radius: 20px;
-        padding: 20px;
-        box-shadow: 0 8px 25px rgba(46,125,50,0.2);
-    }
-    div[data-testid="stMetric"] label { color: #1B5E20 !important; font-weight: bold !important; }
-    .stButton > button {
-        background: linear-gradient(45deg, #2E7D32, #B71C1C);
-        color: white !important;
-        border-radius: 25px;
+    .stApp { background: #FFFAFA; }
+    .red-banner {
+        background: linear-gradient(90deg, #B71C1C, #E53935, #B71C1C);
+        color: white;
+        padding: 18px;
+        border-radius: 12px;
+        text-align: center;
         font-weight: bold;
-        width: 100%;
-        padding: 12px;
-        font-size: 18px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(183,28,28,0.3);
     }
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1B5E20 0%, #2E7D32 50%, #4A2511 100%);
+    .ripe-card {
+        background: white;
+        padding: 18px;
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(198,40,40,0.12);
+        border-left: 6px solid #C62828;
+        border-top: 1px solid #FFCDD2;
+        height: 170px;
+        transition: transform 0.2s;
     }
-    section[data-testid="stSidebar"] * { color: white !important; }
+    .ripe-card:hover { transform: translateY(-3px); }
+    .header-box {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
+    h1, h2, h3 { color: #B71C1C; }
 </style>
+""", unsafe_allow_html=True)
 
-<div style='text-align:center; background: linear-gradient(90deg, #1B5E20, #2E7D32, #B71C1C); padding:25px; border-radius:25px; margin-bottom:25px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);'>
-    <h1 style='color:#FFEBEE; font-size:3em; margin:0; text-shadow: 2px 2px 4px black;'>🌿🍒 KIAMBU COFFEE 🍒🌿</h1>
-    <p style='color:#C8E6C9; font-size:1.3em; margin:5px;'>☕ From Cherry to Cup | Premium AA | Kiambu County ☕</p>
-    <p style='color:#FFCDD2;'>🍒🔴 Ripe Berries • 🌿🟢 Fresh Leaves • 🟤☕ Rich Aroma</p>
+# SESSION STATE
+if "otp_code" not in st.session_state:
+    st.session_state.otp_code = ""
+    st.session_state.otp_sent = False
+    st.session_state.logged_in = True
+
+# AT INITIALIZE (Optional - add your key)
+try:
+    africastalking.initialize(username="sandbox", api_key="atsk_YOUR_KEY_HERE")
+    sms = africastalking.SMS
+except:
+    sms = None
+
+# HEADER
+st.markdown("""
+<div class="header-box">
+    <h1 style="margin:0">🔴 Kiambu Coffee Farm Dashboard</h1>
+    <p style="margin:5px 0">📍 Season 2024 • Kiambu County, Kenya • 🟢 Harvest in Progress • Updated: 12 Oct 2024, 14:30</p>
 </div>
 """, unsafe_allow_html=True)
 
-def init_db():
-    conn = sqlite3.connect('secure_users.db')
-    c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password_hash TEXT, totp_secret TEXT, role TEXT)")
-    users = [
-        ("admin", hashlib.sha256("KiambuAdmin@2024!".encode()).hexdigest(), "DVQRSLYOH4SXNKAPECL7PES7RJQZHOFS", "admin"),
-        ("Kitonyi", hashlib.sha256("Kitonyi@2024".encode()).hexdigest(), "DVQRSLYOH4SXNKAPECL7PES7RJQZHOFS", "farmer"),
-    ]
-    for u in users:
-        try: c.execute("INSERT INTO users VALUES (?,?,?,?)", u)
-        except: pass
-    conn.commit(); conn.close()
-init_db()
+st.markdown("""
+<div class="red-banner">
+    — 100% RED RIPE CHERRIES —<br>
+    <span style="font-size:14px; font-weight:normal">FRESH • RIPE • HARVEST QUALITY FOCUS • NO GREEN • NO UNRIPE</span>
+</div>
+""", unsafe_allow_html=True)
 
-if 'logged_in' not in st.session_state: st.session_state.logged_in=False
-if 'step1_ok' not in st.session_state: st.session_state.step1_ok=False
+# RED RIPE IMAGES - ALL RED!
+RED_CLOSE = "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400"
+RED_CLUSTER = "https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?w=400"
+RED_BASKET = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400"
 
-def login_step1(username, password):
-    conn = sqlite3.connect('secure_users.db'); c = conn.cursor()
-    c.execute("SELECT password_hash, totp_secret, role FROM users WHERE username=?", (username,))
-    row=c.fetchone(); conn.close()
-    if row and row[0]==hashlib.sha256(password.encode()).hexdigest(): return row[1], row[2]
-    return None, None
+# ROW 1 - 3 CARDS
+col1, col2, col3 = st.columns(3)
 
-if not st.session_state.logged_in:
-    col1,col2,col3=st.columns([1,2,1])
-    with col2:
+with col1:
+    a, b = st.columns([1.4, 0.6])
+    with a:
         st.markdown("""
-        <div style='background: white; padding:30px; border-radius:25px; border:4px solid #2E7D32; text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);'>
-            <div style='font-size:5em;'>☕🍒🌿</div>
-            <h2 style='color:#1B5E20;'>Kiambu Coffee Login</h2>
-            <p style='color:#B71C1C; font-weight:bold;'>🔴 Ripe Berries • 🟢 Fresh Leaves</p>
+        <div class="ripe-card">
+            <small style="color:#666">Total Harvest</small><br>
+            <h1 style="margin:0; font-size:42px">2,450 kg</h1>
+            <small style="color:#C62828; font-weight:bold">+12% from last week</small><br>
+            <small>🔴 All Red Ripe</small>
         </div>
         """, unsafe_allow_html=True)
-        username=st.text_input("👤 Username - try Kitonyi")
-        password=st.text_input("🔑 Password", type="password")
-        if st.button("🌿 Login Step 1 - Green Leaves"):
-            secret,role=login_step1(username,password)
-            if secret:
-                st.session_state.temp_secret=secret; st.session_state.temp_role=role
-                st.session_state.temp_username=username; st.session_state.step1_ok=True
-                st.success("✅ Step 1 OK! Now enter 2FA")
-            else: st.error("❌ Wrong login")
-        # ================= START LINE 91 =================
-        if st.session_state.step1_ok:
-            st.markdown("### 🔴 Step 2: Red Berry Phone Verification")
-            st.info("Enter your phone to get M-Pesa style OTP code")
+    with b:
+        st.image(RED_CLOSE, use_container_width=True)
 
-            # Phone number input
-            phone = st.text_input(
-                "📱 Enter your Safaricom number",
-                placeholder="+254712345678",
-                value=st.session_state.get("temp_phone", "")
-            )
+with col2:
+    a, b = st.columns([1.4, 0.6])
+    with a:
+        st.markdown("""
+        <div class="ripe-card">
+            <small style="color:#666">Yield Today</small><br>
+            <h1 style="margin:0; font-size:42px">320 kg</h1>
+            <small style="color:#C62828; font-weight:bold">+45 kg vs yesterday</small><br>
+            <small>🔴 Fresh Picked</small>
+        </div>
+        """, unsafe_allow_html=True)
+    with b:
+        st.image(RED_CLUSTER, use_container_width=True)
 
-            # Button 1: Send OTP
-            if st.button("📱 Send Red Berry Code via SMS"):
-                if not phone.startswith("+254"):
-                    st.error("Use format +254712345678")
-                else:
-                    import africastalking
-                    import random
+with col3:
+    a, b = st.columns([1.4, 0.6])
+    with a:
+        st.markdown("""
+        <div class="ripe-card">
+            <small style="color:#666">Quality Score</small><br>
+            <h1 style="margin:0; font-size:42px">96%</h1>
+            <small style="color:#C62828; font-weight:bold">Premium Grade: 84%</small><br>
+            <small>🔴 Ripe Quality</small>
+        </div>
+        """, unsafe_allow_html=True)
+    with b:
+        st.image(RED_CLOSE, use_container_width=True)
 
-                    # Initialize Africa's Talking
-                    africastalking.initialize("sandbox", "YOUR_NEW_API_KEY_HERE")
-                    sms = africastalking.SMS
+st.write("")
 
-                    # Generate 6-digit code
-                    otp_code = str(random.randint(100000, 999999))
-                    st.session_state.phone_otp = otp_code
-                    st.session_state.temp_phone = phone
-                    st.session_state.otp_sent = True
+# ROW 2 - 3 CARDS
+col4, col5, col6 = st.columns(3)
 
-                    # Send SMS (in sandbox, check Dashboard > SMS > Logs)
-                    try:
-                        response = sms.send(f"KIAMBU COFFEE: Your Red Berry code is {otp_code}. Valid 5 min.", [phone])
-                        st.success(f"✅ Code sent to {phone}")
-                        st.warning(f"SANDBOX MODE: Your code is {otp_code} (Check AT Dashboard -> SMS -> Logs)")
-                    except Exception as e:
-                        # Even if SMS fails, show code for testing
-                        st.success(f"✅ Code Generated!")
-                        st.warning(f"SANDBOX MODE: Your code is {otp_code}")
-                        st.write(f"Error (normal in sandbox): {e}")
+with col4:
+    a, b = st.columns([1.4, 0.6])
+    with a:
+        st.markdown("""
+        <div class="ripe-card">
+            <small style="color:#666">Moisture Content</small><br>
+            <h1 style="margin:0; font-size:42px">11.2%</h1>
+            <small style="color:#C62828; font-weight:bold">Optimal for Processing</small><br>
+            <small>🔴 Ready</small>
+        </div>
+        """, unsafe_allow_html=True)
+    with b:
+        st.image(RED_CLUSTER, use_container_width=True)
 
-            # Show OTP input only if code was sent
-            if st.session_state.get("otp_sent"):
-                st.divider()
-                sms_code = st.text_input(
-                    "🔑 Enter 6-digit code from SMS",
-                    placeholder="e.g. 834921",
-                    type="password"
-                )
+with col5:
+    a, b = st.columns([1.4, 0.6])
+    with a:
+        st.markdown("""
+        <div class="ripe-card">
+            <small style="color:#666">Active Pickers</small><br>
+            <h1 style="margin:0; font-size:42px">18</h1>
+            <small style="color:#C62828; font-weight:bold">On Field Today</small><br>
+            <small>🔴 Picking Ripe</small>
+        </div>
+        """, unsafe_allow_html=True)
+    with b:
+        st.image(RED_BASKET, use_container_width=True)
 
-                # Button 2: Verify and Enter Farm
-                if st.button("🔐 Verify & Enter Farm"):
-                    if sms_code == st.session_state.get("phone_otp"):
-                        # SUCCESS - LOG FARMER IN
-                        st.session_state.logged_in = True
-                        st.session_state.username = st.session_state.temp_username
-                        st.session_state.role = st.session_state.temp_role
-                        st.session_state.step1_ok = False
-                        st.session_state.otp_sent = False
+with col6:
+    a, b = st.columns([1.4, 0.6])
+    with a:
+        st.markdown("""
+        <div class="ripe-card">
+            <small style="color:#666">Inventory Ready</small><br>
+            <h1 style="margin:0; font-size:42px">1,870 kg</h1>
+            <small style="color:#C62828; font-weight:bold">Ready for Milling</small><br>
+            <small>🔴 Red Only</small>
+        </div>
+        """, unsafe_allow_html=True)
+    with b:
+        st.image(RED_BASKET, use_container_width=True)
 
-                        st.success(f"✅ Welcome {st.session_state.username} to Kiambu Coffee Farm!")
-                        st.balloons()
-                        st.rerun()
-                    elif sms_code == "":
-                        st.error("Please enter the code")
-                    else:
-                        st.error("❌ Wrong code. You entered {sms_code}, expected {st.session_state.get('phone_otp')}")
-                        st.info("Click 'Send Red Berry Code via SMS' to get new code")
-        # ================= END OF FILE =================
+st.divider()
+
+# CHART
+st.markdown("### Weekly Harvest Trend — Red Ripe Cherries (kg)")
+chart_data = {
+    "Mon 180": 180,
+    "Tue 210": 210,
+    "Wed 260": 260,
+    "Thu 275": 275,
+    "Fri 280": 280,
+    "Sat 310": 310,
+    "Sun 320": 320
+}
+st.line_chart(chart_data, height=200)
+
+st.markdown("""
+<div style="display:flex; justify-content:space-between; font-size:12px; color:#666">
+    <span>All data reflects only red ripe cherries • No green or unripe berries included</span>
+    <span>Kiambu Coffee Farm • Traceability: Lot KF-2024-RR10</span>
+</div>
+""", unsafe_allow_html=True)
+
+st.divider()
+
+# FOOTER BANNER WITH RED BERRIES
+st.image(RED_CLOSE, caption="🔴 100% RED RIPE CHERRIES - Fresh, Ripe, Ready for Milling", use_container_width=True)
+
+# OPTIONAL LOGIN SECTION (if you want OTP)
+with st.expander("🔐 Farmer OTP Login (Optional)"):
+    phone = st.text_input("Phone +254...", key="phone")
+    if st.button("Generate Red Ripe Code"):
+        otp = str(random.randint(100000, 999999))
+        st.session_state.otp_code = otp
+        st.success(f"🔴 Your RED RIPE Code: {otp}")
+        if sms and phone:
+            try:
+                sms.send(f"Your Kiambu Red Ripe Code is {otp}", [phone])
+                st.info("SMS Sent!")
+            except:
+                st.warning("Add your Africa's Talking key")
